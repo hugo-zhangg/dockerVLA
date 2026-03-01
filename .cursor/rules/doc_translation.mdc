@@ -1,0 +1,13 @@
+---
+description: Ensure all documentation (README and plans) are written in both English and Chinese, separated into distinct sections.
+globs: README.md, PROJECT_PLAN.md, *.md
+---
+# Document Translation Rule
+
+All project documentation, specifically README.md and project planning documents like PROJECT_PLAN.md, MUST include both English and Chinese translations.
+
+## Formatting Requirements
+1. **Separation:** The English and Chinese versions must be completely separated into distinct sections within the same file.
+2. **No Interleaving:** Do not mix English and Chinese within the same paragraph or list.
+3. **Structure:** The file should typically start with the complete English version (e.g., '# [English Title] ...'), followed by a clear visual separator (like '---'), and then the complete Chinese version (e.g., '# [中文标题] ...').
+4. **Consistency:** Ensure both sections convey the exact same technical commands, steps, and project statuses.

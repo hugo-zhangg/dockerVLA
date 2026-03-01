@@ -1,0 +1,20 @@
+# Dependencies
+__pycache__/
+*.py[cod]
+
+# Data and Models
+data/
+models/
+checkpoints/
+checkpoints_overfit/
+
+# Logs and Results
+runs/
+runs_overfit/
+results/
+.cursor/debug.log
+
+# Docker/System
+*.tar
+*.tar.gz
+.DS_Store

@@ -1,0 +1,51 @@
+---
+description: Code Annotation Standard for Learning and Research
+globs: src/**/*.py, scripts/**/*.py, *.py, Dockerfile
+alwaysApply: true
+---
+
+# Code Annotation & Learning Guide
+
+This project follows a strict annotation standard to facilitate efficient learning and research.
+All source code files must include "Learning Level" annotations and detailed explanations for core logic.
+
+## 1. File-Level Annotation & Table of Contents (Required)
+Every file must start with a header indicating its overall importance, followed by a **Table of Contents (TOC)** listing key modules/sections with their learning levels and line numbers (approximate).
+
+```python
+# ==============================================================================
+# [LEARNING LEVEL]: DEEP DIVE / SKIM / IGNORE
+# [ROLE]: Brief description of what this file does in the VLA system.
+# ==============================================================================
+# [TOC]:
+# - [DEEP DIVE] Training Loop (Lines 54-100): Core noise prediction logic.
+# - [SKIM]      Inference Loop (Lines 105-135): Sampling process for generating actions.
+# ==============================================================================
+```
+
+- **DEEP DIVE**: Core logic. Requires understanding syntax, math, and physics.
+- **SKIM**: Helper functions or standard boilerplate. Understand inputs/outputs only.
+- **IGNORE**: Utility, setup, or legacy code. Safe to skip entirely after reading the [ROLE].
+
+## 2. Block-Level Annotation
+Major code blocks (classes, complex methods) must be annotated with:
+
+```python
+# [SECTION]: <Section Name>
+# [LEVEL]: <DEEP DIVE / SKIM>
+# [SYNTAX]: Explanation of Python specific usage (if complex).
+# [MATH]: Mathematical formula or concept implemented (e.g., MSE Loss, Gaussian Noise).
+# [PHYSICS/LOGIC]: Physical meaning in robotics (e.g., Joint Velocities, End-effector Pose).
+```
+
+## 3. Inline Comments
+- **Crucial Lines**: Explain *why* this is done, not just *what*.
+- **Tensor Shapes**: Always document shape transformations (e.g., `(B, T, D) -> (B, D, T)`).
+
+## 4. Maintenance
+- **Update Line Numbers**: After adding detailed comments and annotations, the line numbers in the Table of Contents (TOC) will shift. You MUST update the TOC line numbers as the final step of editing a file to ensure they reflect the new structure.
+
+## Learning Strategy
+- **If DEEP DIVE**: Read line-by-line. Focus on `[MATH]` and `[PHYSICS]` tags to understand the underlying principles.
+- **If SKIM**: Read the `[ROLE]` and `[LOGIC]` tags to understand the module's purpose, then skip the implementation details.
+- **If IGNORE**: Read the `[ROLE]` tag to know it exists, then close the file.

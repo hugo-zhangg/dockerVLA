@@ -1,0 +1,12 @@
+data/
+checkpoints/
+runs/
+wandb/
+__pycache__/
+.git/
+.vscode/
+*.tar
+*.tar.gz
+*.log
+*.pt
+*.bin
