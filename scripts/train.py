@@ -24,7 +24,7 @@ import time
 from torch.utils.data import DataLoader
 from accelerate import Accelerator
 from src.vla_model import VLA_Model
-from src.dataset import RLDSDataset, collate_fn
+from src.dataset import RLDSDataset, QwenCollateFn
 from torch.optim import AdamW
 from diffusers.optimization import get_cosine_schedule_with_warmup
 
@@ -66,7 +66,7 @@ def main():
     parser.add_argument("--batch_size", type=int, default=4)
     parser.add_argument("--grad_accum_steps", type=int, default=1)
     parser.add_argument("--learning_rate", type=float, default=1e-4)
-    parser.add_argument("--dataset_path", type=str, default="data/libero_rlds/inspire/hdd/project/embodied-multimodality/public/syfei/libero_new/release/dataset/libero_plus_rlds00/libero_plus_mixdata/libero_mix/1.0.0")
+    parser.add_argument("--dataset_path", type=str, default="data/inspire/hdd/project/embodied-multimodality/public/syfei/libero_new/release/dataset/libero_plus_rlds00/libero_plus_mixdata/libero_mix/1.0.0")
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--max_episodes", type=int, default=None)
     parser.add_argument("--max_steps", type=int, default=None)
@@ -79,17 +79,22 @@ def main():
     # Init ClearML
     try:
         from clearml import Task
+        # Remove offline mode to allow cloud synchronization
         task = Task.init(project_name='DockerVLA', task_name='VLA_Training')
         # We can also connect argparse
         task.connect(vars(args))
-    except ImportError:
-        print("ClearML not installed or not configured, skipping ClearML initialization.")
+    except Exception as e:
+        print(f"ClearML init failed or not configured, skipping. Error: {e}")
 
-    # 1. Initialize Accelerator
+    from accelerate.utils import DataLoaderConfiguration
     accelerator = Accelerator(
         gradient_accumulation_steps=args.grad_accum_steps,
         log_with="tensorboard",
-        project_dir="runs"
+        project_dir="runs",
+        dataloader_config=DataLoaderConfiguration(
+            split_batches=True,  # Default, but let's make it explicit
+            dispatch_batches=False # Important! Do not let accelerate cut our batch. We'll do it or handle it.
+        )
     )
     
     if accelerator.is_main_process:
@@ -121,7 +126,7 @@ def main():
         ds, 
         batch_size=args.batch_size, 
         num_workers=args.num_workers, 
-        collate_fn=collate_fn,
+        collate_fn=QwenCollateFn(processor),
         pin_memory=True
     )
     
@@ -139,7 +144,18 @@ def main():
         num_training_steps=max_train_steps
     )
     
-    # 5. Prepare
+    # Note: Accelerator `prepare` explicitly scatters data inside DataLoaders.
+    # Because Qwen's `pixel_values` (N, 1176) and `image_grid_thw` (Batch, 3) do NOT share the same
+    # first dimension size, DDP scatter will corrupt them.
+    # SOLUTION: Use `accelerator.prepare(model, optimizer, lr_scheduler)` but NOT dataloader!
+    # Let the accelerate library wrap the dataloader normally, BUT we must tell it not to split
+    # the dict keys it doesn't understand properly, OR we manually slice the batch ourselves.
+    
+    # Actually, accelerate's default dispatch splits all dict values at dim=0.
+    # To fix Qwen DDP batch splitting, the standard Hugging Face solution is to pass
+    # specific kwargs telling accelerate NOT to split pixel_values.
+    
+    # We will prepare everything together, but we need to intercept the batch splitting in training loop.
     model, optimizer, dl, lr_scheduler = accelerator.prepare(
         model, optimizer, dl, lr_scheduler
     )

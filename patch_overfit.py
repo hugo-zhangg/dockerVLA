@@ -1,3 +1,8 @@
+# ==============================================================================
+# [LEARNING LEVEL]: IGNORE
+# [ROLE]: Temporary script for manipulating train_overfit.py.
+# ==============================================================================
+
 import re
 with open("scripts/train_overfit.py", "r") as f:
     content = f.read()

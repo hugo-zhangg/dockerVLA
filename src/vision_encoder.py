@@ -25,10 +25,18 @@ class VisionEncoder(nn.Module):
         
         # Load Pretrained Qwen2-VL Model
         print(f"Loading Qwen2-VL from {config.vision_backbone}...")
+        
+        # When using accelerate with multiple GPUs, we MUST NOT use device_map="auto"
+        # as it conflicts with DDP. We should let accelerate handle device placement.
+        # But for FP16 loading, we can keep torch_dtype.
+        import os
+        is_multi_gpu = int(os.environ.get("WORLD_SIZE", 1)) > 1
+        device_map = None if is_multi_gpu else "auto"
+        
         self.model = Qwen2VLForConditionalGeneration.from_pretrained(
             config.vision_backbone,
             torch_dtype=torch.float16,
-            device_map="auto",
+            device_map=device_map,
             trust_remote_code=True
         )
         self.processor = AutoProcessor.from_pretrained(config.vision_backbone, trust_remote_code=True)
@@ -67,6 +75,8 @@ class VisionEncoder(nn.Module):
         [SYNTAX]: forward 接收图像和文本输入。
         [PHYSICS]: 将外部世界的像素信号和人类指令，转化为计算机内部的抽象向量表示。
         """
+        # Output from QwenCollateFn via processor is already standard tensor dict.
+        # No need to handle lists here anymore.
         # Prepare inputs dict
         inputs = {
             "input_ids": input_ids,

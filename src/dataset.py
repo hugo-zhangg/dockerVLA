@@ -304,16 +304,16 @@ class RLDSDataset(IterableDataset):
         
     def process_sample(self, image, instruction, action_chunk):
         """
-        [SECTION]: Qwen Processor
+        [SECTION]: Return Raw Items
         [LEVEL]: DEEP DIVE
-        [LOGIC]: 使用 Qwen 的 Processor 将原始图像和文本转换为模型输入 Tensor。
+        [LOGIC]: 返回原始的对话指令、图片和动作张量。
+                 不在这里调用 processor，以避免在 collate_fn 拼装时因提前打平导致的 DDP 多卡同步错误。
         """
         # Convert numpy image to PIL
         if isinstance(image, np.ndarray):
             image = Image.fromarray(image)
         
-        # Prepare Qwen inputs
-        # Construct prompt with chat template
+        # Prepare conversation format for Qwen
         conversation = [
             {
                 "role": "user",
@@ -324,73 +324,49 @@ class RLDSDataset(IterableDataset):
             }
         ]
         
-        # Format text prompt
-        text_prompt = self.processor.apply_chat_template(conversation, add_generation_prompt=True)
-        
-        # Process inputs
-        inputs = self.processor(
-            text=[text_prompt],
-            images=[image],
-            padding="max_length",
-            max_length=512, # Qwen can be long, but limit for efficiency
-            return_tensors="pt"
-        )
-        
-        # Extract tensors (remove batch dim 0 since we process single sample)
-        # pixel_values: (num_patches, hidden_dim) - flattened
-        pixel_values = inputs['pixel_values'] 
-        
-        # image_grid_thw: (1, 3) -> (3,)
-        if 'image_grid_thw' in inputs:
-            image_grid_thw = inputs['image_grid_thw'].squeeze(0)
-        else:
-            # Fallback for older versions or if not present
-            image_grid_thw = torch.tensor([]) 
-            
-        input_ids = inputs['input_ids'].squeeze(0)
-        attention_mask = inputs['attention_mask'].squeeze(0)
-        
         # Action to Tensor
         action_tensor = torch.from_numpy(action_chunk).float()
         
         return {
-            "pixel_values": pixel_values,
-            "image_grid_thw": image_grid_thw,
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
+            "conversation": conversation,
+            "image": image,
             "actions": action_tensor
         }
 
-def collate_fn(batch):
+class QwenCollateFn:
     """
-    [SECTION]: Custom Collate Function
-    [LEVEL]: SKIM
+    [SECTION]: Custom Collate Function (Callable Class)
+    [LEVEL]: DEEP DIVE
     [LOGIC]: 
-      Handle Qwen2-VL's specific batching requirements:
-      1. pixel_values are concatenated (flattened).
-      2. image_grid_thw are stacked.
-      3. input_ids/attention_mask are stacked (padded).
+      1. 统一接收整个 Batch 的图片和文本。
+      2. 统一调用 Qwen Processor，让 Hugging Face 官方代码来处理所有的 pad, cat, 以及 grid_thw 逻辑。
+      3. 返回标准的张量字典。
     """
-    # 1. Flatten pixel_values from all samples into one long tensor
-    pixel_values = torch.cat([x['pixel_values'] for x in batch], dim=0)
-    
-    # 2. Stack image_grid_thw
-    if batch[0]['image_grid_thw'].numel() > 0:
-        image_grid_thw = torch.stack([x['image_grid_thw'] for x in batch])
-    else:
-        image_grid_thw = None
+    def __init__(self, processor):
+        self.processor = processor
         
-    # 3. Stack text inputs (assuming they are padded to max_length in process_sample)
-    input_ids = torch.stack([x['input_ids'] for x in batch])
-    attention_mask = torch.stack([x['attention_mask'] for x in batch])
-    
-    # 4. Stack actions
-    actions = torch.stack([x['actions'] for x in batch])
-    
-    return {
-        "pixel_values": pixel_values,
-        "image_grid_thw": image_grid_thw,
-        "input_ids": input_ids,
-        "attention_mask": attention_mask,
-        "actions": actions
-    }
+    def __call__(self, batch):
+        conversations = [x['conversation'] for x in batch]
+        images = [x['image'] for x in batch]
+        actions = torch.stack([x['actions'] for x in batch])
+        
+        # Format text prompts
+        text_prompts = [
+            self.processor.apply_chat_template(conv, add_generation_prompt=True)
+            for conv in conversations
+        ]
+        
+        # Process entire batch at once using HF Processor
+        inputs = self.processor(
+            text=text_prompts,
+            images=images,
+            padding="max_length",
+            max_length=512, # Limit token sequence length
+            return_tensors="pt"
+        )
+        
+        # Append actions to the resulting batch dictionary
+        # DDP will split all these batched tensors accurately across GPU 0 and GPU 1
+        inputs['actions'] = actions
+        
+        return inputs

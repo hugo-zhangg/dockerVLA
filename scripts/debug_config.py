@@ -1,3 +1,8 @@
+# ==============================================================================
+# [LEARNING LEVEL]: IGNORE
+# [ROLE]: Temporary debugging script to check Hugging Face model config fields.
+# ==============================================================================
+
 from transformers import AutoConfig
 try:
     config = AutoConfig.from_pretrained("Qwen/Qwen2-VL-7B-Instruct", trust_remote_code=True)

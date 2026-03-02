@@ -38,13 +38,13 @@ class VLA_Model(nn.Module):
         self.projector = nn.Linear(
             self.vision_encoder.hidden_size, 
             getattr(config, 'dit_hidden_dim', 512)
-        )
+        ).to(self.device)
         
         # 3. Initialize Diffusion Head (Action Expert)
-        self.diffusion_head = DiffusionPolicy(config)
+        self.diffusion_head = DiffusionPolicy(config).to(self.device)
         
         # [MATH]: Mean Squared Error (MSE)
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.MSELoss().to(self.device)
 
     def forward(self, pixel_values, input_ids, attention_mask, image_grid_thw=None, gt_actions=None):
         """
@@ -62,7 +62,8 @@ class VLA_Model(nn.Module):
         vision_outputs = self.vision_encoder(pixel_values, input_ids, attention_mask, image_grid_thw)
         
         # Cast to float32 (or whatever dtype projector is) because Qwen is FP16/BF16 but DiT is usually FP32
-        vision_outputs = vision_outputs.to(dtype=self.projector.weight.dtype)
+        # Also ensure it is on the correct device for the projector
+        vision_outputs = vision_outputs.to(dtype=self.projector.weight.dtype, device=self.projector.weight.device)
         
         # 2. Projection
         # Output: (B, Seq_Len, H_dit)

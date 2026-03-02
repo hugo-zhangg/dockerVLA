@@ -70,19 +70,19 @@ accelerate launch --multi_gpu --num_processes 2 scripts/train.py \
   --save_steps 1000000
 ```
 
-#### Stage C: 2 GPUs + 10 Episodes + 500 Steps
-**Goal**: Validate checkpoint saving, resume correctness, and loss curve continuity.
+#### Stage C: 2 GPUs + 10 Episodes + 200,000 Steps
+**Goal**: Observe convergence characteristics and loss downward trend over a longer training period (200k steps). Use checkpoints to run inference and output ground truth vs. predicted action curves to visually evaluate fitting quality.
 ```bash
 accelerate launch --multi_gpu --num_processes 2 scripts/train.py \
-  --epochs 1 \
+  --epochs 5000 \
   --batch_size 2 \
   --grad_accum_steps 1 \
   --num_workers 4 \
   --max_episodes 10 \
-  --max_steps 500 \
-  --log_steps 50 \
-  --save_steps 200 \
-  --checkpoint_dir checkpoints
+  --max_steps 200000 \
+  --log_steps 100 \
+  --save_steps 20000 \
+  --checkpoint_dir checkpoints/train_200k
 ```
 
 #### Stage D: Target GPUs (e.g., 8 GPUs) + Full Training
@@ -138,7 +138,27 @@ For iterative updates after the initial migration, avoid transferring large `.ta
 ## 📊 Monitoring
 Logs are saved locally to `runs/vla_experiment`.
 
-### Run Inside Docker (Recommended)
+### ClearML Integration (Cloud Tracking)
+For advanced experiment tracking, we use ClearML. To set it up on a new server:
+1. **Register**: Go to [app.clear.ml](https://app.clear.ml) and create a free account.
+2. **Generate Credentials**: Go to `Settings` -> `Workspace` -> `Create new credentials`.
+3. **Configure Server**: Run `clearml-init` in your container/terminal and paste the configuration block.
+Alternatively, manually create the `~/clearml.conf` file:
+```bash
+cat << 'EOF' > ~/clearml.conf
+api {
+    web_server: https://app.clear.ml
+    api_server: https://api.clear.ml
+    files_server: https://files.clear.ml
+    credentials {
+        "access_key" = "YOUR_ACCESS_KEY"
+        "secret_key" = "YOUR_SECRET_KEY"
+    }
+}
+EOF
+```
+
+### Run TensorBoard Inside Docker (Local Alternative)
 ```bash
 docker run -it --rm -p 6006:6006 -v $(pwd)/runs:/workspace/runs vla_offline_ready tensorboard --logdir /workspace/runs --host 0.0.0.0
 ```
@@ -219,19 +239,19 @@ accelerate launch --multi_gpu --num_processes 2 scripts/train.py \
   --save_steps 1000000
 ```
 
-#### 阶段 C：2 卡 + 10 个 Episodes + 500 Steps
-**目标**：验证 checkpoint 保存、断点恢复的正确性以及 loss 曲线的连续性。
+#### 阶段 C：2 卡 + 10 个 Episodes + 200,000 Steps
+**目标**：观察在更长训练周期（20万步）下的收敛特性与 Loss 下降趋势。并利用断点进行推理，输出预测动作与 Ground Truth 的对比曲线，以直观判断拟合质量。
 ```bash
 accelerate launch --multi_gpu --num_processes 2 scripts/train.py \
-  --epochs 1 \
+  --epochs 5000 \
   --batch_size 2 \
   --grad_accum_steps 1 \
   --num_workers 4 \
   --max_episodes 10 \
-  --max_steps 500 \
-  --log_steps 50 \
-  --save_steps 200 \
-  --checkpoint_dir checkpoints
+  --max_steps 200000 \
+  --log_steps 100 \
+  --save_steps 20000 \
+  --checkpoint_dir checkpoints/train_200k
 ```
 
 #### 阶段 D：目标显卡数（如 8 卡）+ 全量训练
@@ -287,7 +307,27 @@ accelerate launch --multi_gpu --num_processes 2 scripts/train.py \
 ## 📊 监控指南
 日志文件保存在本地的 `runs/vla_experiment` 目录下。
 
-### 在 Docker 内启动 (推荐)
+### ClearML 实验追踪 (云端监控)
+为了实现更高级的实验指标监控，项目接入了 ClearML。要在新服务器上进行配置：
+1. **注册账号**：前往 [app.clear.ml](https://app.clear.ml) 免费注册。
+2. **生成凭证**：登录后，点击右上角头像进入 `Settings` -> `Workspace` -> `Create new credentials`。
+3. **配置服务器**：在容器或宿主机终端内运行 `clearml-init` 并粘贴生成的配置代码。
+或者直接创建 `~/clearml.conf` 配置文件：
+```bash
+cat << 'EOF' > ~/clearml.conf
+api {
+    web_server: https://app.clear.ml
+    api_server: https://api.clear.ml
+    files_server: https://files.clear.ml
+    credentials {
+        "access_key" = "你的_ACCESS_KEY"
+        "secret_key" = "你的_SECRET_KEY"
+    }
+}
+EOF
+```
+
+### 在 Docker 内启动 TensorBoard (本地备选)
 ```bash
 docker run -it --rm -p 6006:6006 -v $(pwd)/runs:/workspace/runs vla_offline_ready tensorboard --logdir /workspace/runs --host 0.0.0.0
 ```

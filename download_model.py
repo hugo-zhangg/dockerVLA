@@ -1,3 +1,8 @@
+# ==============================================================================
+# [LEARNING LEVEL]: IGNORE
+# [ROLE]: Utility script to download Qwen2-VL model from Hugging Face Hub to local directory.
+# ==============================================================================
+
 import os
 from huggingface_hub import snapshot_download
 
