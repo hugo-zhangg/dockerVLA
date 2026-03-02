@@ -86,9 +86,10 @@ accelerate launch --multi_gpu --num_processes 2 scripts/train.py \
 ```
 
 #### Stage D: Target GPUs (e.g., 8 GPUs) + Full Training
-Once Stage C is successful, run your full pre-training script.
+Once Stage C is successful, run your full pre-training script. You can pass specific GPU numbers and custom training arguments.
 ```bash
-./run_cloud.sh
+# Example: Use GPUs 4,5,6,7 and save checkpoint every 50,000 steps
+CUDA_VISIBLE_DEVICES=4,5,6,7 ./run_cloud.sh --save_steps 50000 --checkpoint_dir checkpoints/train_full
 ```
 
 ---
@@ -255,9 +256,10 @@ accelerate launch --multi_gpu --num_processes 2 scripts/train.py \
 ```
 
 #### 阶段 D：目标显卡数（如 8 卡）+ 全量训练
-当阶段 C 验证成功后，即可运行全量预训练脚本。
+当阶段 C 验证成功后，即可运行全量预训练脚本。你可以指定使用哪些显卡，并透传任意训练参数。
 ```bash
-./run_cloud.sh
+# 示例：使用 4,5,6,7 号显卡，每 50,000 步保存一次
+CUDA_VISIBLE_DEVICES=4,5,6,7 ./run_cloud.sh --save_steps 50000 --checkpoint_dir checkpoints/train_full
 ```
 
 ---

@@ -44,9 +44,9 @@ This is a 5-day project plan for training a VLA model.
       - Goal: Validate DDP/NCCL initialization, process startup, gradient synchronization, and logging stability.
     - **Stage B**: 2 GPUs + 2-4 episodes + 100-300 steps.
       - Goal: Validate TFDS data iteration and multi-worker stability under distributed execution.
-    - **Stage C**: 2 GPUs + 10 episodes + 200,000 steps.
+    - [x] **Stage C**: 2 GPUs + 10 episodes + 200,000 steps.
       - Goal: Observe convergence characteristics and loss downward trend over a longer training period (200k steps). Use checkpoints to run inference and output ground truth vs. predicted action curves to visually evaluate fitting quality.
-    - **Stage D**: Target GPU count (4/8) + multi-episode smoke test.
+    - [x] **Stage D**: Target GPU count (4/8) + multi-episode smoke test.
       - Goal: Final distributed smoke test before launching long full-dataset training.
   - Train on the full `libero_mix` dataset (approx 75GB).
   - Monitor training metrics via WandB / Tensorboard.
@@ -108,9 +108,9 @@ This is a 5-day project plan for training a VLA model.
       - 目标：验证 DDP/NCCL 初始化、进程启动、梯度同步和日志稳定性。
     - **阶段 B**：2 卡 + 2-4 个 episodes + 100-300 steps。
       - 目标：验证 TFDS 数据迭代以及多 worker 在分布式执行下的稳定性。
-    - **阶段 C**：2 卡 + 10 个 episodes + 20万 steps。
+    - [x] **阶段 C**：2 卡 + 10 个 episodes + 20万 steps。
       - 目标：观察在更长训练周期（200,000步）下的收敛特性与 Loss 下降趋势。并利用断点（Checkpoint）进行推理，输出预测动作与 Ground Truth 的对比曲线，以直观判断过拟合/拟合质量。
-    - **阶段 D**：目标显卡数 (4/8 卡) + 多 episode 冒烟测试。
+    - [x] **阶段 D**：目标显卡数 (4/8 卡) + 多 episode 冒烟测试。
       - 目标：正式全量数据集长跑前的最后一次分布式冒烟测试。
   - 在完整 `libero_mix` 数据集上进行训练 (约 75GB)。
   - 通过 WandB / Tensorboard 监控训练指标。

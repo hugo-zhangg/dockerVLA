@@ -41,13 +41,20 @@ fi
 
 # 3. Check GPUs
 echo "[3] Detecting GPUs..."
-if command -v nvidia-smi &> /dev/null; then
-    NUM_GPUS=$(nvidia-smi -L | grep "GPU" | wc -l)
-    echo "Found $NUM_GPUS GPU(s)."
-    nvidia-smi -L
+if [ -z "$CUDA_VISIBLE_DEVICES" ]; then
+    if command -v nvidia-smi &> /dev/null; then
+        NUM_GPUS=$(nvidia-smi -L | grep "GPU" | wc -l)
+        echo "CUDA_VISIBLE_DEVICES is not set. Found $NUM_GPUS physical GPU(s)."
+        nvidia-smi -L
+    else
+        echo "Error: nvidia-smi not found. Ensure NVIDIA drivers and container toolkit are installed."
+        NUM_GPUS=0
+    fi
 else
-    echo "Error: nvidia-smi not found. Ensure NVIDIA drivers and container toolkit are installed."
-    NUM_GPUS=0
+    # Calculate number of GPUs specified by counting commas + 1
+    NUM_GPUS=$(echo $CUDA_VISIBLE_DEVICES | awk -F"," '{print NF}')
+    echo "CUDA_VISIBLE_DEVICES is set to: $CUDA_VISIBLE_DEVICES"
+    echo "Using $NUM_GPUS targeted GPU(s)."
 fi
 
 # 4. Launch Training
@@ -62,15 +69,14 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 if [ "$NUM_GPUS" -gt 1 ]; then
     echo "Multi-GPU detected. Launching with Accelerate..."
     # Launch with all available GPUs. 
-    # Let train.py handle batch size dynamically or pass via --batch_size
-    # "$@" passes any extra arguments to the script (e.g. --resume_from_checkpoint)
+    # "$@" passes any extra arguments to the script (e.g. --resume_from_checkpoint, --save_steps)
     accelerate launch \
         --multi_gpu \
         --num_processes=$NUM_GPUS \
-        scripts/train.py --epochs 10 "$@"
+        scripts/train.py "$@"
 else
     echo "Single-GPU or No-GPU detected. Launching with standard python..."
-    python scripts/train.py --epochs 10 "$@"
+    python scripts/train.py "$@"
 fi
 
 echo "========================================"
